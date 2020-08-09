@@ -7,20 +7,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/michlabs/fbbot/memory"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/michlabs/fbbot/memory"
+	"github.com/sirupsen/logrus"
 )
 
 type Bot struct {
 	// User defined fields
-	Page            Page // TODO: How to find out it?
-	port            int
-	verifyToken     string
-	appSecret       string
-	pageAccessToken string
-	greeting_text   string
+	Page             Page // TODO: How to find out it?
+	port             int
+	verifyToken      string
+	appSecret        string
+	pageAccessToken  string
+	subscribedFields string
+	greeting_text    string
 
 	// Handler
 	messageHandlers        []MessageHandler
@@ -40,14 +42,15 @@ type Bot struct {
 	mux    *http.ServeMux
 }
 
-func New(port int, verifyToken string, appSecret string, pageAccessToken string) *Bot {
-	var b Bot = Bot{
-		port:            port,
-		verifyToken:     verifyToken,
-		appSecret:       appSecret,
-		pageAccessToken: pageAccessToken,
-		mux:             http.NewServeMux(),
-		Logger:          logrus.New(),
+func New(port int, verifyToken string, appSecret string, pageAccessToken string, subscribedFields string) *Bot {
+	var b = Bot{
+		port:             port,
+		verifyToken:      verifyToken,
+		appSecret:        appSecret,
+		pageAccessToken:  pageAccessToken,
+		subscribedFields: subscribedFields,
+		mux:              http.NewServeMux(),
+		Logger:           logrus.New(),
 	}
 	b.mux.HandleFunc(WebhookURL, b.handle)
 	b.LTMemory = memory.New("ephemeral")
@@ -432,7 +435,7 @@ func (b *Bot) RemoveGreetingText() error {
 }
 
 func (b *Bot) httppost(url string, data map[string]interface{}) ([]byte, error) {
-	url = fmt.Sprintf("%s?access_token=%s", url, b.pageAccessToken)
+	url = fmt.Sprintf("%s?subscribed_fields=%s&access_token=%s", url, b.subscribedFields, b.pageAccessToken)
 
 	d, err := json.Marshal(data)
 	if err != nil {
